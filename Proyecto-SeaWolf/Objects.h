@@ -15,9 +15,9 @@ struct Menu {
 };
 
 struct Config {	
-	int extraTimePoints[4];	
-	int selectedExtraTimePoints;
-	int selectedOption;
+	int extraTimePoints[4];	  // Puntos para tiempo extra.
+	int selectedExtraTimePoints;  //Guarda el puntuaje para tiempo extra seleccionado.
+	int selectedOption;  //Posicion dentro del arreglo de los puntuajes
 	ALLEGRO_COLOR selectedColor;
 };
 
@@ -33,8 +33,8 @@ struct Game {
 	bool pause;
 	bool redraw;
 	bool isGameOver;
-	int time;
-	int gameTime;
+	int time;      //Tiempo que ha pasado
+	int gameTime;  //Game time es el tiempo restante de juego.
 	int score;
 	int scoreMilestone;
 	int milestone;

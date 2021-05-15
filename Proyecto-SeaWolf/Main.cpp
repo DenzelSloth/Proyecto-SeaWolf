@@ -14,10 +14,10 @@ const int WIDTH = 1024;  //Ancho de la pantalla.
 const int HEIGHT = 768;  //Alto de la pantalla.
 const int FPS = 60;      //Frames por segundo - Se usa para medir tiempos.
 
-const int DEFAULT_GAME_TIME = 20;   //Tiempo de juego (En segundos).
-const int DEFAULT_EXTRA_TIME = 0;  //Tiempo extra al llegar a la meta de puntos (En segundos).
+const int DEFAULT_GAME_TIME = 60;   //Tiempo de juego (En segundos).
+const int DEFAULT_EXTRA_TIME = 30;   //Tiempo extra al llegar a la meta de puntos (En segundos).
 const int NUM_TORPEDOS = 5;         //Cantidad Maxima de Torpedos.
-const int TORPEDO_COOLDOWN = 0;     //Enfriamento entre disparos de torpedo (En segundos).
+const int TORPEDO_COOLDOWN = 5;     //Enfriamento entre disparos de torpedo (En segundos).
 const int RELOAD_TIME = 5;          //Tiempo de regarga de torpedos (En segundos).
 const int NUM_SHIPS = 2;            //Numero maximo de barcos en pantalla.
 const int NUM_MINES = 2;            //Numero maximo de Minas en pantalla.
@@ -26,28 +26,39 @@ const bool SHOW_HITBOXES = false;   //Muestra los límites de textura para colisi
 
 bool keys[5] = { false, false, false, false }; //Arreglo para determinar estados de teclas. 
 
-/** Variables Globales **/
-ALLEGRO_DISPLAY* DISPLAY;
-Config CONFIG;
-Score SCORES;
+/** Variables Globales / Publicas **/
+ALLEGRO_DISPLAY* DISPLAY; //Objeto de la pantalla.
+Config CONFIG;            //Objeto para almacenar las configuaciones 
+Score SCORES;             //Objeto para guardar las puntuaciones
 
-/** Prototipo de Metodos **/
+/** Prototipo de Metodos  / Declaracion de funciones **/
 int game();
 int menu();
 int config();
+
+/** Metodo de incializacion de objetos **/
 void initConfig(Config& config);
 void initScore(Score& score);
 void initGame(Game& game);
-void pauseGame(Game& game);
 void initSubmarine(Submarine& submarine, ALLEGRO_BITMAP* image);
+void initTorpedos(Torpedo torpedo[], int size, ALLEGRO_BITMAP* image, ALLEGRO_SAMPLE* launchSound);
+void initInventory(Inventory& inventory, ALLEGRO_BITMAP* image, ALLEGRO_SAMPLE* reloadSound);
+void initShip(Ship ships[], int size);
+void initExplosions(Explosion explosions[], int size, ALLEGRO_BITMAP* image, ALLEGRO_SAMPLE* explosionSound);
+void initMines(Mine mines[], int size, ALLEGRO_BITMAP* mineImage);
+/** Metodo de incializacion de objetos **/
+
+
+
+
+
+void pauseGame(Game& game);
 void drawSubmarine(Submarine& submarine);
 void moveSubmarineLeft(Submarine& submarine);
 void moveSubmarineRight(Submarine& submarine);
-void initInventory(Inventory& inventory, ALLEGRO_BITMAP* image, ALLEGRO_SAMPLE* reloadSound);
 void reloadSubmarine(Inventory& inventory, Game& game);
 void updateInventory(Torpedo torpedo[], int size, Inventory& inventory, Game& game);
 void drawInventory(Torpedo torpedo[], int size, Inventory& inventory, ALLEGRO_FONT* font);
-void initTorpedos(Torpedo torpedo[], int size, ALLEGRO_BITMAP* image, ALLEGRO_SAMPLE* launchSound);
 void drawTorpedos(Torpedo torpedo[], int size);
 void fireTorpedo(Torpedo torpedo[], int size, Submarine& submarine, Inventory& inventory, Game& game);
 void updateTorpedos(Torpedo torpedo[], int size);
@@ -55,15 +66,12 @@ void collideTorpedosShips(Torpedo torpedo[], int sizeTorpedos, Ship ships[], int
     Game& game, Explosion explosions[], int eSize);
 void collideTorpedosMines(Torpedo torpedo[], int sizeTorpedos, Mine mines[], int sizeMines, Submarine& submarine,
     Game& game, Explosion explosions[], int eSize);
-void initShip(Ship ships[], int size);
 void drawShip(Ship ships[], int size);
 void startShip(Ship ships[], int size, ALLEGRO_BITMAP* shipImages[], ALLEGRO_SAMPLE* hornSound);
 void updateShips(Ship ships[], int size);
-void initMines(Mine mines[], int size, ALLEGRO_BITMAP* mineImage);
 void drawMines(Mine mines[], int size);
 void startMine(Mine mines[], int size);
 void updateMines(Mine mines[], int size);
-void initExplosions(Explosion explosions[], int size, ALLEGRO_BITMAP* image, ALLEGRO_SAMPLE* explosionSound);
 void drawExplosions(Explosion explosions[], int size);
 void startExplosions(Explosion explosion[], int size, int x, int y);
 void updateExplosions(Explosion explosions[], int size);
@@ -74,6 +82,7 @@ int main(){
     if (!al_init())
         return -1;
 
+    /*Preparacion de modulos Allegro*/
     al_init_primitives_addon();
     al_install_mouse();
     al_install_keyboard();
@@ -82,7 +91,7 @@ int main(){
     al_init_image_addon();
     al_install_audio();
     al_init_acodec_addon();
- 
+    /*Preparacion de modulos Allegro*/
 
     DISPLAY = al_create_display(WIDTH, HEIGHT);
 
@@ -91,11 +100,12 @@ int main(){
 
     al_set_window_title(DISPLAY, "Menu Principal");
 
-
     initConfig(CONFIG);
     initScore(SCORES);
     menu();
 
+    al_uninstall_mouse();
+    al_uninstall_keyboard();
     al_destroy_display(DISPLAY);
     al_uninstall_audio();
 
@@ -120,7 +130,6 @@ int menu(void) {
     timer = al_create_timer(1.0 / FPS);
 
     menuImage = al_load_bitmap("Resources/MenuImage.png");
-    clicSound = al_load_sample("Resources/MouseClickSound.ogg");
     font48 = al_load_font("Resources/PixelFont.ttf", 48, 0);
 
     al_register_event_source(event_queue, al_get_mouse_event_source());
@@ -139,6 +148,8 @@ int menu(void) {
         else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN) {
             menu.mouseX = ev.mouse.x;
             menu.mouseY = ev.mouse.y;
+
+            //std::cout << "Mouse X, " << menu.mouseX << "  - MouseY, " << menu.mouseY << "\n";
 
             if (menu.mouseX >= 35 && menu.mouseX <= 485 && menu.mouseY >= 450 && menu.mouseY <= 531) {
                 menu.selection = PLAY;                             
@@ -184,7 +195,6 @@ int menu(void) {
     }
 
     al_destroy_bitmap(menuImage);
-
     al_destroy_event_queue(event_queue);
     al_destroy_timer(timer);
     al_destroy_font(font48);
@@ -222,10 +232,12 @@ int config(void) {
     al_start_timer(timer);
 
     while (!menu.exit) {
-
         ALLEGRO_EVENT ev;
-        al_wait_for_event(event_queue, &ev);
-        al_draw_bitmap(configImage, 0, 0, 0);
+
+        //Espera a detectar eventos.
+        al_wait_for_event(event_queue, &ev);      
+      
+        //Procesamiento de eventos
         if (ev.type == ALLEGRO_EVENT_TIMER) {
             menu.redraw = true;
         }
@@ -273,15 +285,17 @@ int config(void) {
             else {
                 menu.selection = NOCONFIG;
             }
-
         }
 
+        //Evento que detecta el cierre de la ventana (windows).
         else if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
             menu.exit = true;
 
         if (menu.redraw && al_is_event_queue_empty(event_queue)) {
+            //Dibuja el fonto
             al_draw_bitmap(configImage, 0, 0, 0);
 
+            //Ciclo que dibuja las ultimas puntuaciones,Si no hay escribe un texto
             if (SCORES.scoresLenght == 0) {
                 al_draw_textf(font28, al_map_rgb(0, 0, 0),
                     120, 400, 0, "No hay");
@@ -297,11 +311,13 @@ int config(void) {
                 }
             }
 
+            //Dibuja los puntos para tiempo extra en los botones.
             for (int i = 0; i < 4; i++) {
                 al_draw_textf(font28, al_map_rgb(0, 0, 0),
                     665, 355 + (100 * i), 0, "%i", CONFIG.extraTimePoints[i]);
             }
 
+            //Dibuja recuadro rojo en la opcion seleccionada
             switch (CONFIG.selectedOption) {
             case OPTION1:
                 al_draw_rectangle(640, 344, 948, 415, CONFIG.selectedColor, 3);
@@ -319,6 +335,8 @@ int config(void) {
                 al_draw_rectangle(909, 11, 1000, 97, CONFIG.selectedColor, 3);
                 break;
             }
+
+            //Dibuja rectangulo blanco cuando pasas el mouse
             switch (menu.selection) {
             case OPTION1:
                 al_draw_rectangle(640, 344, 948, 415, menu.selectionColor, 3);
@@ -352,6 +370,9 @@ int config(void) {
 }
 
 int game(void) {
+
+    /* Objetos / Clases */
+    //Game es la Clase,  y game es e objeto
     Game game;
     Inventory inventory;
     Submarine submarine;
@@ -360,11 +381,12 @@ int game(void) {
     Mine mines[NUM_MINES];
     Explosion explosions[NUM_EXPLOSIONS];
     
-    ALLEGRO_EVENT_QUEUE* event_queue = NULL;
-    ALLEGRO_TIMER* timer = NULL;
-    ALLEGRO_FONT* font28 = NULL;
-    ALLEGRO_FONT* font48 = NULL;
+    ALLEGRO_EVENT_QUEUE* event_queue = NULL; //Cola de eventos
+    ALLEGRO_TIMER* timer = NULL;  //Reloj
+    ALLEGRO_FONT* font28 = NULL;  //Fuente pequena
+    ALLEGRO_FONT* font48 = NULL;  //Fuente Grande
 
+    /*Declara las imagenes a usar*/
     ALLEGRO_BITMAP* backgroundImage = NULL;
     ALLEGRO_BITMAP* submarineImage = NULL;
     ALLEGRO_BITMAP* reloadImage = NULL;
@@ -373,14 +395,20 @@ int game(void) {
     ALLEGRO_BITMAP* shipImages[4];
     ALLEGRO_BITMAP* expImage = NULL;
 
+    /*Declara los sonidos a usar*/
     ALLEGRO_SAMPLE* launchSound = NULL;
     ALLEGRO_SAMPLE* reloadSound = NULL;
     ALLEGRO_SAMPLE* explosionSound = NULL;
     ALLEGRO_SAMPLE* hornSound = NULL;
 
-    event_queue = al_create_event_queue();
-    timer = al_create_timer(1.0 / FPS);
+    /*Definiciones*/
 
+    event_queue = al_create_event_queue();  //Definicion de la cola de eventos
+    timer = al_create_timer(1.0 / FPS);     //Definicion de el reloj
+
+    /*Define las imagenes*/
+    //C:\XXXX\XXXX\Desktop\Proyecto-SeaWolf\Proyecto-SeaWolf\Resources   -- Ruta Absoluta
+    //Resources/BackgroundImage.png   -- Rutas relativas  
     backgroundImage = al_load_bitmap("Resources/BackgroundImage.png");
     submarineImage = al_load_bitmap("Resources/CrosshairSprite.png");
     reloadImage = al_load_bitmap("Resources/reloadSprite.png");
@@ -392,14 +420,19 @@ int game(void) {
     shipImages[3] = al_load_bitmap("Resources/BotePTSprite.png");
     expImage = al_load_bitmap("Resources/PixelExplotionSpriteFramesImage.png");
 
+    /*Guarda espacios en la memoria de la tarjeta de sonido para que se puedran reproducir todos*/
     al_reserve_samples(16);
 
+    /*Carga los sonidos*/
     launchSound = al_load_sample("Resources/SonarSound.ogg");
     reloadSound = al_load_sample("Resources/LoadSound.ogg");
     explosionSound = al_load_sample("Resources/ExplosionSound.ogg");
     hornSound = al_load_sample("Resources/BotePTSound.ogg");
 
+    /*Trae numeros aleatorios segun los segundos que se executo (time)*/
     srand(time(NULL));
+
+    /*Inicializa los objetos*/
     initGame(game);
     initSubmarine(submarine, submarineImage);
     initInventory(inventory, reloadImage, reloadSound);
@@ -605,8 +638,8 @@ void initConfig(Config& config) {
     config.extraTimePoints[2] = 1500;
     config.extraTimePoints[3] = 2000;
     config.selectedExtraTimePoints = 1;
-    CONFIG.selectedExtraTimePoints = CONFIG.extraTimePoints[OPTION1];
-    CONFIG.selectedColor = al_map_rgb(255, 0, 0);
+    config.selectedExtraTimePoints = config.extraTimePoints[OPTION1];
+    config.selectedColor = al_map_rgb(255, 0, 0);
 }
 
 void initScore(Score& score) {
@@ -620,7 +653,7 @@ void initGame(Game& game) {
     game.redraw = true;
     game.isGameOver = false;
     game.score = 0;
-    game.gameTime = DEFAULT_GAME_TIME * 100;
+    game.gameTime = DEFAULT_GAME_TIME * 100; //Convierte los segundos a milisegundos.
     game.scoreMilestone = CONFIG.selectedOption;
     game.milestone = 1;
 }
